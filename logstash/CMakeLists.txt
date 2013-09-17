@@ -3,15 +3,19 @@ IF(LOGSTASH)
         ${PROJECT_SOURCE_DIR}/logstash/include)
 
     LINK_DIRECTORIES(
-        )
+    )
+
+    FILE(GLOB_RECURSE HEADERS . *.hpp)
 
     ADD_LIBRARY(logstash MODULE
+        ${HEADERS}
         src/logstash
         src/module)
 
     TARGET_LINK_LIBRARIES(logstash
         cocaine-core
-        boost_system-mt)
+        boost_system-mt
+    )
 
     SET_TARGET_PROPERTIES(logstash PROPERTIES
         PREFIX ""

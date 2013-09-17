@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2011-2013 Evgeny Safronov <esafronov@yandex-team.ru>
+    Copyright (c) 2011-2013 Evgeny Safronov <division494@gmail.com>
     Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
 
     This file is part of Cocaine.
@@ -18,19 +18,19 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "cocaine/loggers/logstash.hpp"
+#include "cocaine/logging/formatters/logstash.hpp"
 
 using namespace cocaine;
-using namespace cocaine::logging;
 
 extern "C" {
     auto
     validation() -> api::preconditions_t {
+        //!@todo: Make required version = 0.11.0
         return api::preconditions_t { COCAINE_MAKE_VERSION(0, 10, 5) };
     }
 
     void
     initialize(api::repository_t& repository) {
-        repository.insert<cocaine::logging::logstash_t>("logstash");
+        repository.insert<cocaine::logging::formatters::logstash_t>("logstash");
     }
 }

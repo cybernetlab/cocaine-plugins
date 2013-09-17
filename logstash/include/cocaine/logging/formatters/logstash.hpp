@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2011-2013 Evgeny Safronov <esafronov@yandex-team.ru>
+    Copyright (c) 2011-2013 Evgeny Safronov <division494@gmail.com>
     Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
 
     This file is part of Cocaine.
@@ -20,33 +20,29 @@
 
 #pragma once
 
-#include <cocaine/api/logger.hpp>
+#include <cocaine/api/logging/formatter.hpp>
 
-#include <cocaine/asio/socket.hpp>
-#include <cocaine/asio/udp.hpp>
-
-namespace cocaine { namespace logging {
+namespace cocaine { namespace logging { namespace formatters {
 
 class logstash_t:
-    public api::logger_t
+    public api::formatter_t
 {
     public:
-        logstash_t(const config_t& config, const Json::Value& args);
+        logstash_t(const cocaine::formatter_config_t& config);
 
-        virtual
-        void
-        emit(logging::priorities level, const std::string& source, const std::string& message);
-
-    private:
         std::string
-        prepare_output(logging::priorities level, const std::string& source, const std::string& message);
+        format(const std::string& message, priorities level, log_property_map_t&& properties) const;
+
+    protected:
+        std::string
+        format_message(const logging::log_property_map_t& properties) const;
+
+        std::string
+        format_time(const std::time_t &time) const;
 
     private:
-        const config_t& m_config;
-
-        // NOTE: Could use a TCP socket here for minimal delivery guarantees with a remote
-        // logstash server, but got to do some benchmarking first.
-        std::unique_ptr<io::socket<io::udp>> m_socket;
+        class impl;
+        const std::unique_ptr<impl> d;
 };
 
-}} // namespace cocaine::logging
+} } } // namespace cocaine::logging::formatters

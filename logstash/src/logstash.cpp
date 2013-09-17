@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2011-2013 Evgeny Safronov <esafronov@yandex-team.ru>
+    Copyright (c) 2011-2013 Evgeny Safronov <division494@gmail.com>
 
     Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
 
@@ -19,112 +19,93 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "cocaine/loggers/logstash.hpp"
+#include <chrono>
+#include <iostream>
 
-#include "cocaine/asio/resolver.hpp"
-#include "cocaine/context.hpp"
+#include <json/json.h>
 
-#include <ctime>
-#include <system_error>
+#include "cocaine/logging/formatters/logstash.hpp"
 
-#include <sys/time.h>
+using namespace cocaine::logging::formatters;
 
-using namespace cocaine::logging;
+class json_visitor : public boost::static_visitor<> {
+    Json::Value& root;
+public:
+    json_visitor(Json::Value& root) :
+        root(root)
+    {}
 
-logstash_t::logstash_t(const config_t& config, const Json::Value& args):
-    category_type(config, args),
-    m_config(config)
-{
-    if(args["port"].empty()) {
-        throw cocaine::error_t("no logstash port has been specified");
+    template<typename P>
+    void operator ()(const std::string& name, const P& property) {
+        root[name] = property;
     }
-
-    const auto host = args.get("host", "127.0.0.1").asString();
-    const auto port = args["port"].asUInt();
-
-    std::vector<io::udp::endpoint> endpoints;
-
-    try {
-        endpoints = io::resolver<io::udp>::query(host, port);
-    } catch(const std::system_error& e) {
-        throw cocaine::error_t(
-            "unable to resolve any logstash server endpoints - [%d] %s",
-            e.code().value(),
-            e.code().message()
-        );
-    }
-
-    for(auto it = endpoints.begin(); it != endpoints.end(); ++it) {
-        try {
-            m_socket.reset(new io::socket<io::udp>(*it));
-        } catch(const std::system_error& e) {
-            continue;
-        }
-
-        break;
-    }
-
-    if(!m_socket) {
-        throw cocaine::error_t("unable to connect to '%s:%d'", host, port);
-    }
-}
-
-namespace {
-
-const char* describe[] = {
-    nullptr,
-    "ERROR",
-    "WARNING",
-    "INFO",
-    "DEBUG"
 };
 
+class logstash_t::impl {
+public:
+    Json::Value build_json(const log_property_map_t& properties) const {
+        Json::Value root;
+        json_visitor visitor(root);
+        for (auto it = properties.begin(); it != properties.end(); ++it) {
+            boost::variant<std::string> name = it->first;
+            const log_property_t& property = it->second;
+            boost::apply_visitor(visitor, name, property);
+        }
+
+        return root;
+    }
+
+    template<typename T>
+    T
+    pop_property(log_property_map_t& map, const std::string& key, const T& default_value = T()) const {
+        auto it = map.find(key);
+        if (it != map.end()) {
+            auto value = boost::get<T>(std::move(it->second));
+            map.erase(it);
+            return value;
+        }
+
+        return default_value;
+    }
+};
+
+logstash_t::logstash_t(const cocaine::formatter_config_t& config):
+    category_type(config),
+    d(new impl)
+{
 }
 
 std::string
-logstash_t::prepare_output(logging::priorities level, const std::string& source, const std::string& message) {
-    struct timeval time;
-    struct tm      timeinfo;
+logstash_t::format(const std::string& message, priorities level, log_property_map_t&& properties) const {
+    properties.emplace("level", format_level(level));
 
-    std::memset(&time,     0, sizeof(time));
-    std::memset(&timeinfo, 0, sizeof(timeinfo));
-
-    ::gettimeofday(&time, NULL);
-    ::gmtime_r(&time.tv_sec, &timeinfo);
-
-    char timestamp[128] = { 0 };
-
-    if(std::strftime(timestamp, 128, "%FT%T", &timeinfo) == 0) {
-        // TODO: Do something.
-    }
-
-    Json::Value root, fields;
-
-    fields["level"]      = describe[level];
-    fields["uuid"]       = m_config.network.uuid;
-
-    root["@fields"]      = fields;
+    const std::string& hostname = d->pop_property<std::string>(properties, "source_host");
+    Json::Value root;
     root["@message"]     = message;
-    root["@source"]      = cocaine::format("udp://%s", m_socket->local_endpoint());
-    root["@source_host"] = m_config.network.hostname;
-    root["@source_path"] = source;
-    root["@tags"]        = Json::Value(Json::objectValue);
-    root["@timestamp"]   = cocaine::format("%s.%06ldZ", timestamp, time.tv_usec);
+    root["@source"]      = cocaine::format("udp://%s", hostname);
+    root["@source_host"] = hostname;
+    root["@source_path"] = d->pop_property<std::string>(properties, "source");
+    root["@timestamp"]   = format_time(std::time(nullptr));
+    root["@fields"]      = d->build_json(properties);
 
     Json::FastWriter writer;
-
     return writer.write(root);
 }
 
-void
-logstash_t::emit(logging::priorities level, const std::string& source, const std::string& message) {
-    std::error_code code;
+std::string
+logstash_t::format_message(const log_property_map_t& properties) const {
+    return "";
+}
 
-    if(level == logging::ignore) {
-        return;
+std::string
+logstash_t::format_time(const std::time_t& time) const {
+    char mbstr[128];
+    if (std::strftime(mbstr, 128, "%FT%T", std::localtime(&time))) {
+        auto now = std::chrono::high_resolution_clock::now();
+        auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch());
+        std::size_t fractional_seconds = now_ms.count() % 1000;
+        return std::string(cocaine::format("%s.%03ldZ", mbstr, fractional_seconds));
     }
 
-    const std::string& json = prepare_output(level, source, message);
-
-    m_socket->write(json.c_str(), json.size(), code);
+    return std::string("?");
 }
