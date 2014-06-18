@@ -4,14 +4,15 @@ PROJECT(COCAINE-PLUGINS)
 
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-OPTION(CACHE "Build LRU Cache plugin" ON)
-OPTION(CHRONO "Build Chrono Service plugin" ON)
-OPTION(DOCKER "Build Docker Isolation plugin" ON)
-OPTION(ELASTICSEARCH "Build ElasticSearch Service plugin" ON)
-OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
+OPTION(DEBUGGER "Build Debugger plugin" ON)
+OPTION(CACHE "Build LRU Cache plugin" OFF)
+OPTION(CHRONO "Build Chrono Service plugin" OFF)
+OPTION(DOCKER "Build Docker Isolation plugin" OFF)
+OPTION(ELASTICSEARCH "Build ElasticSearch Service plugin" OFF)
+OPTION(IPVS "Build IPVS Gateway Service plugin" OFF)
 OPTION(MONGO "Build MongoDB Storage plugin" OFF)
 OPTION(PYTHON "Build Python Sandbox plugin" OFF)
-OPTION(URLFETCH "Build URLFetch Service plugin" ON)
+OPTION(URLFETCH "Build URLFetch Service plugin" OFF)
 
 SET(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
@@ -45,6 +46,7 @@ LINK_DIRECTORIES(
     ${LIBMSGPACK_LIBRARY_DIRS})
 
 SET(PLUGINS
+        debugger
         cache
         docker
         chrono
