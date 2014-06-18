@@ -81,3 +81,9 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-plugin-urlfetch2 (= ${bi
 Description: Cocaine - URLFetch Service Development Headers
  Cocaine development headers for the URLFetch Service package.
 
+Package: libcocaine-plugin-debugger
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.12.0.0)
+Description: Cocaine - Debugger Service
+ Debugger service for Cocaine.
+
