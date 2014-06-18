@@ -99,3 +99,8 @@ Description: Cocaine - URLFetch Service Development Headers
 # Description: Cocaine - ZeroMQ Driver
 #  Raw ZeroMQ driver for Cocaine.
 
+Package: libcocaine-plugin-auth2
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.6)
+Description: Cocaine - Auth Service
+ Auth Service for Cocaine.
