@@ -2,10 +2,10 @@
 #include <tuple>
 #include <stdexcept>
 
-#include <cocaine/traits/tuple.hpp>
 #include <cocaine/logging.hpp>
 
 #include "cocaine/service/auth.hpp"
+#include "cocaine/service/auth/authenticate.hpp"
 
 using namespace std::placeholders;
 
@@ -19,6 +19,11 @@ auth_t::auth_t(cocaine::context_t &context,
     m_log(new logging::log_t(context, name))
 {
     COCAINE_LOG_DEBUG(m_log, "Auth started");
+
+    const Json::Value types = args["types"];
+//    if (types.isNull) {
+//
+//    }
 
     on<io::auth::authenticate>("authenticate", std::bind(&auth_t::authenticate, this, _1, _2));
     on<io::auth::authorize>("authorize", std::bind(&auth_t::authorize, this, _1, _2));
