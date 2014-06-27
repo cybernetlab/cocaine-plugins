@@ -15,7 +15,7 @@ auth_t::auth_t(cocaine::context_t & context,
                const Json::Value & args) :
     service_t(context, reactor, name, args),
     m_log(new logging::log_t(context, name)),
-    m_storage(auth::storage::create<auth::storages>(args.get("storage", Json::Value::null))),
+    m_storage(auth::create_storage(args.get("storage", Json::Value::null))),
     m_context(context)
 {
     COCAINE_LOG_DEBUG(m_log, "Auth started");

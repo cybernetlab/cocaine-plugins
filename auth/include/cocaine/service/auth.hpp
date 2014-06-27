@@ -11,7 +11,7 @@
 #include <boost/mpl/list.hpp>
 
 #include "cocaine/service/auth/authentication/plain.hpp"
-#include "cocaine/service/auth/storage/cocaine_storage.hpp"
+#include "cocaine/service/auth/storage/storages.hpp"
 
 namespace cocaine {
 
@@ -72,10 +72,6 @@ namespace response {
 
 namespace auth {
     typedef boost::mpl::list<
-        storage::cocaine_storage
-    > storages;
-
-    typedef boost::mpl::list<
         authentication::plain
     > authenticators;
 }
@@ -96,8 +92,8 @@ private:
 
     std::shared_ptr<logging::log_t> m_log;
     context_t & m_context;
-    //std::shared_ptr<auth::storage_t> m_storage;
-    auth::storage_t & m_storage;
+    std::shared_ptr<auth::storage_t> m_storage;
+    //auth::storage_t & m_storage;
 
     /*class storage_initializer {
     public:
