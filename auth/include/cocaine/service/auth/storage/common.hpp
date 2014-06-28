@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <json/value.h>
 
 namespace cocaine { namespace service { namespace auth {
@@ -7,7 +8,7 @@ namespace cocaine { namespace service { namespace auth {
 class storage_t {
 public:
     virtual
-    std::unique_ptr<Json::Value>
+    std::shared_ptr<Json::Value>
     load(const std::string & ns,
          const std::string & type,
          const std::string & name) const = 0;

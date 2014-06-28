@@ -9,6 +9,7 @@ IF(AUTH)
         include/cocaine/service/auth.hpp
         md5/md5
         src/auth
+        src/storage/cocaine_storage
         src/module)
 
     TARGET_LINK_LIBRARIES(auth

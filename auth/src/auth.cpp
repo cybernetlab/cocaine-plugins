@@ -1,12 +1,9 @@
-#include <boost/mpl/for_each.hpp>
-
 #include <cocaine/logging.hpp>
 
 #include "cocaine/service/auth.hpp"
 #include "cocaine/service/auth/authenticate.hpp"
 
 using namespace std::placeholders;
-
 using namespace cocaine::service;
 
 auth_t::auth_t(cocaine::context_t & context,
@@ -15,17 +12,10 @@ auth_t::auth_t(cocaine::context_t & context,
                const Json::Value & args) :
     service_t(context, reactor, name, args),
     m_log(new logging::log_t(context, name)),
-    m_storage(auth::create_storage(args.get("storage", Json::Value::null))),
+    m_storage(*auth::storage::factory(context, args["storage"]).create()),
     m_context(context)
 {
     COCAINE_LOG_DEBUG(m_log, "Auth started");
-
-    //storage_initializer init_storage { *this, args.get("storage", Json::Value::null) };
-    /*boost::mpl::for_each<
-        boost::mpl::transform<auth::storages, boost::add_pointer<boost::mpl::_1> >::type
-    >(init_storage);*/
-    //boost::mpl::for_each<auth::storages>(init_storage);
-    // boost::mpl::for_each<auth::storages>(init_storage());
 
     on<io::auth::authenticate>("authenticate", std::bind(&auth_t::authenticate, this, _1, _2));
     on<io::auth::authorize>("authorize", std::bind(&auth_t::authorize, this, _1, _2));

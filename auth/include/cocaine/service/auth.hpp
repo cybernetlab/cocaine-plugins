@@ -11,7 +11,7 @@
 #include <boost/mpl/list.hpp>
 
 #include "cocaine/service/auth/authentication/plain.hpp"
-#include "cocaine/service/auth/storage/storages.hpp"
+#include "cocaine/service/auth/storage.hpp"
 
 namespace cocaine {
 
@@ -92,21 +92,7 @@ private:
 
     std::shared_ptr<logging::log_t> m_log;
     context_t & m_context;
-    std::shared_ptr<auth::storage_t> m_storage;
-    //auth::storage_t & m_storage;
-
-    /*class storage_initializer {
-    public:
-        storage_initializer(auth_t & parent, const Json::Value & args) : m_parent(parent), m_args(args) {};
-        template<typename U>
-        void operator()(U) {
-            if (boost::lexical_cast<std::string>(auth::storage::type_name<U>::value) != m_args.get("type", "").asString()) return;
-            m_parent.m_storage = std::make_shared(new U(m_parent.m_context, m_args));
-        }
-    private:
-        auth_t & m_parent;
-        const Json::Value & m_args;
-    };*/
+    auth::storage_t & m_storage;
 };
 
 } // namespace service

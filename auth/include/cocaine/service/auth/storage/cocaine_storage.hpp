@@ -15,14 +15,14 @@ public:
     cocaine_storage(context_t & context,
                     const Json::Value & args);
 
-    std::unique_ptr<Json::Value>
+    std::shared_ptr<Json::Value>
     load(const std::string & ns,
          const std::string & type,
          const std::string & name) const;
 private:
-    std::unique_ptr<api::storage_t> m_storage;
+    context_t & m_context;
+    const std::string & m_storage_name;
+    //std::unique_ptr<api::storage_t> m_storage;
 };
-
-template<> const char * type_name<cocaine_storage>::value = "cocaine_storage";
 
 } } } }
