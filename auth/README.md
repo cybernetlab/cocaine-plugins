@@ -83,7 +83,7 @@ storage_root
 
 #### [result, token] authenticate(string method, string name, string data)
 
-Authenticates user with `name` and authentication `data` (in many cases it is a password). Returns array with _boolean_ `result` and _string_ `token` that can be used to authenticate user. If `result` is `false`, second element contains `reason` of failed authentication.
+Authenticates user with `name` and authentication `data` (in many cases it is a password). Returns array with _boolean_ `result` and _string_ `token` (other name is `session`) that can be used later to authorize user. If `result` is `false`, second element contains `reason` of failed authentication.
 
 #### [result, reason] logout(string token)
 
@@ -91,7 +91,7 @@ Removes user session. Returns array with _boolean_ `result` and _string_ `reason
 
 #### [result, ticket] authorize(string token, string perm)
 
-Authorizes allready authenticated user to specified permission `perm`. Returns array with _boolean_ `result` and _string_ `reason` for fails. `tokens` is not supported yet and empty string returned on success.
+Authorizes allready authenticated user to specified permission `perm`. Returns array with _boolean_ `result` and _string_ `reason` for fails. `ticket` is not supported yet and empty string returned on success.
 
 ### TODO:
 
