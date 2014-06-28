@@ -49,7 +49,7 @@ storage_root
 {
     // required. should be same as file name (without .json)
     "name" : "user_name",
-    // required. should be exactly "users"
+    // required. should be exactly `users`
     "type" : "users",
     // passwords are stored in md5-encoded form
     "password" : "0945fc9611f55fd0e183fb8b044f1afe",
