@@ -8,9 +8,10 @@ Now only plain and md5-encoded passwords authentication and simple role-based au
 
 ### Configuration
 
-Sample cocaine config part regarding auth (remove comments on copy-paste):
+Sample cocaine config part regarding auth (remove comments when copy-paste):
 
 ```json
+{
     "services": {
         "auth": {
             "type": "auth", // required
@@ -27,6 +28,7 @@ Sample cocaine config part regarding auth (remove comments on copy-paste):
         }
 
     },
+}
 ```
 
 With above config following file structure assumed:
@@ -89,7 +91,7 @@ Removes user session. Returns array with _boolean_ `result` and _string_ `reason
 
 #### [result, ticket] authorize(string token, string perm)
 
-Authenticates allready authorized user for specified permission `perm`. Returns array with _boolean_ `result` and _string_ `reason` for fails. `tokens` is not supported yet and empty string returned on success.
+Authorizes allready authenticated user to specified permission `perm`. Returns array with _boolean_ `result` and _string_ `reason` for fails. `tokens` is not supported yet and empty string returned on success.
 
 ### TODO:
 
