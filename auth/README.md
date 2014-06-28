@@ -22,7 +22,7 @@ Sample cocaine config part regarding auth (remove comments when copy-paste):
                 },
                 // prefix all storage operations with this value
                 "namespace": "authdb",
-                // allowed authorization methods
+                // allowed authentication methods
                 "authentication": [ "md5", "plain" ]
             }
         }
