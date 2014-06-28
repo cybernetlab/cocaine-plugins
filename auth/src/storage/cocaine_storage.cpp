@@ -2,19 +2,18 @@
 
 #include <boost/filesystem/operations.hpp>
 
-    using namespace cocaine::service::auth::storage;
+using namespace cocaine::service::auth::storage;
 
-template<> const char * type_name<cocaine_storage>::value = "cocaine_storage";
+const char *cocaine_storage::type_name = "cocaine_storage";
 
 cocaine_storage::cocaine_storage(context_t & context,
                                  const Json::Value & args) :
     storage_t(),
     m_context(context),
-    m_storage_name(args.get("name", "auth").asString())
-    // m_storage { make_unique(api::storage_t(context, args.get("name", "auth").asString())) }
+    m_storage_name(args.get("name", "core").asString())
 {}
 
-std::shared_ptr<Json::Value>
+Json::Value
 cocaine_storage::load(const std::string & ns,
                       const std::string & type,
                       const std::string & name) const
@@ -24,13 +23,34 @@ cocaine_storage::load(const std::string & ns,
 
     Json::Reader reader(Json::Features::strictMode());
     Json::Value obj;
+
+    auto storage = api::storage(m_context, m_storage_name);
     try {
-        if (!reader.parse(api::storage(m_context, m_storage_name)->read(path.string(), name), obj)) {
-            return std::make_shared<Json::Value>(Json::Value::null);
+        if (!reader.parse(storage->read(path.string(), name + ".json"), obj)) {
+            return Json::Value::null;
         }
-        return std::make_shared<Json::Value>(obj);
+        return obj;
     } catch(const storage_error_t& e) {
-        return std::make_shared<Json::Value>(Json::Value::null);
-        // throw cocaine::error_t("unable to initialize the routing groups - %s", e.what());
+        return Json::Value::null;
+    }
+}
+
+bool
+cocaine_storage::save(const std::string & ns,
+                      const std::string & type,
+                      const std::string & name,
+                      const Json::Value & data) const
+{
+    std::ostringstream stream;
+    auto tags = std::vector<std::string>();
+    boost::filesystem::path path(ns);
+    path /= type;
+    auto storage = api::storage(m_context, m_storage_name);
+    stream << data;
+    try {
+        storage->write(path.string(), name + ".json", stream.str(), tags);
+        return true;
+    } catch(const storage_error_t& e) {
+        return false;
     }
 }

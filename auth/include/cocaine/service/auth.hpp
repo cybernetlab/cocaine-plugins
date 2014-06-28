@@ -10,7 +10,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/mpl/list.hpp>
 
-#include "cocaine/service/auth/authentication/plain.hpp"
+#include "cocaine/service/auth/authentication.hpp"
 #include "cocaine/service/auth/storage.hpp"
 
 namespace cocaine {
@@ -24,13 +24,27 @@ namespace auth {
         typedef auth_tag tag;
 
         typedef boost::mpl::list<
+            /* type */ std::string,
             /* name */ std::string,
-            /* salt */ std::string
+            /* data */ std::string
         > tuple_type;
 
         typedef boost::mpl::list<
             /* result */ bool,
             /* token */  std::string
+        > result_type;
+    };
+
+    struct logout {
+        typedef auth_tag tag;
+
+        typedef boost::mpl::list<
+            /* token */ std::string
+        > tuple_type;
+
+        typedef boost::mpl::list<
+            /* result */ bool,
+            /* reason */  std::string
         > result_type;
     };
 
@@ -53,6 +67,7 @@ template<>
 struct protocol<auth_tag> {
     typedef mpl::list<
         auth::authenticate,
+        auth::logout,
         auth::authorize
     > type;
 
@@ -68,31 +83,40 @@ namespace service {
 namespace response {
     typedef io::event_traits<io::auth::authenticate>::result_type authenticate;
     typedef io::event_traits<io::auth::authorize>::result_type authorize;
-}
-
-namespace auth {
-    typedef boost::mpl::list<
-        authentication::plain
-    > authenticators;
+    typedef io::event_traits<io::auth::logout>::result_type logout;
 }
 
 class auth_t: public api::service_t {
 public:
-    auth_t(context_t& context,
-           io::reactor_t& reactor,
-           const std::string& name,
-           const Json::Value& args);
+    auth_t(context_t & context,
+           io::reactor_t & reactor,
+           const std::string & name,
+           const Json::Value & args);
 
 private:
     cocaine::deferred<response::authenticate>
-    authenticate(const std::string &name, const std::string &salt);
+    authenticate(const std::string & type, const std::string & name, const std::string & data);
+
+    cocaine::deferred<response::logout>
+    logout(const std::string & token);
 
     cocaine::deferred<response::authorize>
-    authorize(const std::string &token, const std::string &perm);
+    authorize(const std::string & token, const std::string & perm);
 
-    std::shared_ptr<logging::log_t> m_log;
+    void
+    save_user(Json::Value & user);
+
+    void
+    save_sessions(Json::Value & user);
+
+    bool
+    inArray(Json::Value & arr, const std::string & value) const;
+
     context_t & m_context;
-    auth::storage_t & m_storage;
+    std::shared_ptr<logging::log_t> m_log;
+    std::shared_ptr<auth::storage_t> m_storage;
+    auth::authentication::map_t m_authenticators;
+    const std::string m_namespace;
 };
 
 } // namespace service

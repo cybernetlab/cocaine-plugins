@@ -1,15 +1,19 @@
 IF(AUTH)
     INCLUDE_DIRECTORIES(
         ${PROJECT_SOURCE_DIR}/auth/include
-        ${PROJECT_SOURCE_DIR}/auth/md5)
+        ${PROJECT_SOURCE_DIR}/auth/md5
+        ${PROJECT_SOURCE_DIR}/auth/unique_id)
 
     LINK_DIRECTORIES()
 
     ADD_LIBRARY(auth MODULE
         include/cocaine/service/auth.hpp
+        unique_id/unique_id
         md5/md5
         src/auth
         src/storage/cocaine_storage
+        src/authentication/plain.cpp
+        src/authentication/md5.cpp
         src/module)
 
     TARGET_LINK_LIBRARIES(auth
