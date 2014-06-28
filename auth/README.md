@@ -21,7 +21,7 @@ Sample cocaine config part regarding auth (remove comments when copy-paste):
                     "name": "core"             // storage name
                 },
                 // prefix all storage operations with this value
-                "namespace": "authdb"
+                "namespace": "authdb",
                 // allowed authorization methods
                 "authentication": [ "md5", "plain" ]
             }
@@ -50,11 +50,11 @@ storage_root
     // required. should be same as file name (without .json)
     "name" : "user_name",
     // required. should be exactly "users"
-    "type" : "users"
+    "type" : "users",
     // passwords are stored in md5-encoded form
     "password" : "0945fc9611f55fd0e183fb8b044f1afe",
     // should be an array
-    "roles" : [ "guest" ],
+    "roles" : [ "guest" ]
 }
 ```
 
