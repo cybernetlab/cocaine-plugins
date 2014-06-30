@@ -11,9 +11,11 @@ IF(AUTH)
         unique_id/unique_id
         md5/md5
         src/auth
+        src/storage/base
         src/storage/cocaine_storage
         src/authentication/plain.cpp
         src/authentication/md5.cpp
+        src/authorization/permissions.cpp
         src/module)
 
     TARGET_LINK_LIBRARIES(auth

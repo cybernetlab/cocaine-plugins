@@ -2,7 +2,6 @@
 
 #include "unique_id.hpp"
 #include "cocaine/service/auth.hpp"
-#include "cocaine/service/auth/authenticate.hpp"
 
 using namespace std::placeholders;
 using namespace cocaine::service;
@@ -14,9 +13,9 @@ auth_t::auth_t(cocaine::context_t & context,
     service_t(context, reactor, name, args),
     m_context(context),
     m_log(std::make_shared<logging::log_t>(context, name)),
-    m_storage(auth::storage::factory(context, args["storage"]).create()),
+    m_storage(auth::storage::factory().create(context, args["storage"])),
     m_authenticators(auth::authentication::factory(args["authentication"]).create()),
-    m_namespace(args.get("namespace", "").asString())
+    m_permissions(m_log, m_storage)
 {
     COCAINE_LOG_DEBUG(m_log, "Auth started");
 
@@ -35,7 +34,7 @@ auth_t::authenticate(const std::string & type,
                      const std::string & data) {
     cocaine::deferred<response::authenticate> deferred;
     // load user
-    Json::Value user = m_storage->load(m_namespace, "users", name);
+    Json::Value user = m_storage->load("users", name);
     if (user.isNull()) {
         deferred.write(std::make_tuple(false, "user not found"));
         return deferred;
@@ -63,7 +62,7 @@ auth_t::authenticate(const std::string & type,
     // generate token
     unique_id_t uuid = unique_id_t();
     std::string uuid_str(uuid.string());
-    Json::Value sessions = m_storage->load(m_namespace, "", "sessions");
+    Json::Value sessions = m_storage->load("", "sessions");
     user["session"] = uuid_str;
     sessions[uuid_str] = name;
     // save all
@@ -83,14 +82,14 @@ cocaine::deferred<response::logout>
 auth_t::logout(const std::string &token) {
     cocaine::deferred<response::logout> deferred;
     // find session
-    Json::Value sessions = m_storage->load(m_namespace, "", "sessions");
+    Json::Value sessions = m_storage->load("", "sessions");
     if (sessions[token].isNull()) {
         deferred.write(std::make_tuple(false, "wrong token"));
         return deferred;
     }
     try {
         // find user for session
-        Json::Value user = m_storage->load(m_namespace, "users", sessions[token].asString());
+        Json::Value user = m_storage->load("users", sessions[token].asString());
         if (user.isNull() || user["session"].asString() != token) {
             // if no valid user remove this token as it is invalid, return :ok
             sessions.removeMember(token);
@@ -119,46 +118,26 @@ cocaine::deferred<response::authorize>
 auth_t::authorize(const std::string &token, const std::string &perm) {
     cocaine::deferred<response::authenticate> deferred;
     // find session
-    Json::Value sessions = m_storage->load(m_namespace, "", "sessions");
+    Json::Value sessions = m_storage->load("", "sessions");
     if (sessions[token].isNull()) {
         deferred.write(std::make_tuple(false, "wrong token"));
         return deferred;
     }
     // find user for session
-    Json::Value user = m_storage->load(m_namespace, "users", sessions[token].asString());
+    Json::Value user = m_storage->load("users", sessions[token].asString());
     if (user.isNull()) {
         deferred.write(std::make_tuple(false, "wrong token"));
         return deferred;
     }
-    // load permissions
-    Json::Value permissions = m_storage->load(m_namespace, "", "permissions");
-    // check for denied premissions
-    for (auto & role: user["roles"]) {
-        for (auto & permission: permissions) {
-            if (!inArray(permission["deny"], role.asString())) continue;
-            if (!inArray(permission["to"], perm)) continue;
-            deferred.write(std::make_tuple(false, ""));
-            return deferred;
-        }
-    }
-    // check for allowed premissions
-    for (auto & role: user["roles"]) {
-        for (auto & permission: permissions) {
-            if (!inArray(permission["allow"], role.asString())) continue;
-            if (!inArray(permission["to"], perm)) continue;
-            deferred.write(std::make_tuple(true, ""));
-            return deferred;
-        }
-    }
-    // deny by default
-    deferred.write(std::make_tuple(false, ""));
+    // return permission check result
+    deferred.write(std::make_tuple(m_permissions.check(user, perm), ""));
     return deferred;
 }
 
 void
 auth_t::save_user(Json::Value & user)
 {
-    if (!m_storage->save(m_namespace, "users", user["name"].asString(), user)) {
+    if (!m_storage->save("users", user["name"].asString(), user)) {
         COCAINE_LOG_INFO(m_log, "Error while writing user %s to storage", user["name"].asString());
         throw false;
     }
@@ -167,19 +146,8 @@ auth_t::save_user(Json::Value & user)
 void
 auth_t::save_sessions(Json::Value & sessions)
 {
-    if (!m_storage->save(m_namespace, "", "sessions", sessions)) {
+    if (!m_storage->save("", "sessions", sessions)) {
         COCAINE_LOG_INFO(m_log, "Error while writing sessions to storage");
         throw false;
     }
-}
-
-bool
-auth_t::inArray(Json::Value & arr, const std::string & value) const
-{
-    if (!arr.isArray() || arr.empty()) return false;
-    for (auto & item: arr) {
-        if (!item.isString()) continue;
-        if (item.asString() == value) return true;
-    }
-    return false;
 }

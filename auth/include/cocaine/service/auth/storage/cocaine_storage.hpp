@@ -17,17 +17,14 @@ public:
                     const Json::Value & args);
 
     Json::Value
-    load(const std::string & ns,
-         const std::string & type,
+    load(const std::string & type,
          const std::string & name) const;
 
     bool
-    save(const std::string & ns,
-         const std::string & type,
+    save(const std::string & type,
          const std::string & name,
          const Json::Value & data) const;
 private:
-    context_t & m_context;
     std::string m_storage_name;
 };
 

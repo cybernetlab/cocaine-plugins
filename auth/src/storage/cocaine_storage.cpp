@@ -8,17 +8,15 @@ const char *cocaine_storage::type_name = "cocaine_storage";
 
 cocaine_storage::cocaine_storage(context_t & context,
                                  const Json::Value & args) :
-    storage_t(),
-    m_context(context),
+    storage_t(context, args),
     m_storage_name(args.get("name", "core").asString())
 {}
 
 Json::Value
-cocaine_storage::load(const std::string & ns,
-                      const std::string & type,
+cocaine_storage::load(const std::string & type,
                       const std::string & name) const
 {
-    boost::filesystem::path path(ns);
+    boost::filesystem::path path(m_namespace);
     path /= type;
 
     Json::Reader reader(Json::Features::strictMode());
@@ -36,14 +34,13 @@ cocaine_storage::load(const std::string & ns,
 }
 
 bool
-cocaine_storage::save(const std::string & ns,
-                      const std::string & type,
+cocaine_storage::save(const std::string & type,
                       const std::string & name,
                       const Json::Value & data) const
 {
     std::ostringstream stream;
     auto tags = std::vector<std::string>();
-    boost::filesystem::path path(ns);
+    boost::filesystem::path path(m_namespace);
     path /= type;
     auto storage = api::storage(m_context, m_storage_name);
     stream << data;

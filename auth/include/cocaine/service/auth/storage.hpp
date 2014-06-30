@@ -33,19 +33,11 @@ class factory {
     const Json::Value & m_args;
     context_t & m_context;
 
-public:
-    factory(context_t & context, const Json::Value & args) :
-        m_context(context),
-        m_args(args),
-        m_name(args["type"].asString())
-    {};
-
     // needed to wrap storage type to prevent their creation while lookup with for_each
     template <typename T> struct wrap {};
 
-    /**
-     * @brief lookups for storage type with `m_name` type name and creates instance when it finded
-     */
+public:
+    // lookups for storage type with `m_name` type name and creates instance when it finded
     template <typename T>
     void operator()(wrap<T>) {
         // avoid invalid usage and multiple storage creation
@@ -56,9 +48,12 @@ public:
     };
 
     std::shared_ptr<storage_t>
-    create() {
+    create(context_t & context, const Json::Value & args) {
         m_factory = this;
         m_result = nullptr;
+        m_context = context;
+        m_args = args;
+        m_name = args["type"].asString();
         mpl::for_each<list, wrap<mpl::placeholders::_1> >(*this);
         if (m_result == nullptr) throw cocaine::error_t("wrong storage type (%s)", m_name);
         return m_result;

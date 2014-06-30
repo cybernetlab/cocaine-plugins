@@ -16,17 +16,19 @@ Sample cocaine config part regarding auth (remove comments when copy-paste):
         "auth": {
             "type": "auth", // required
             "args": {
-                "storage": {                   // required
-                    "type": "cocaine_storage", // only this supported now
-                    "name": "core"             // storage name
+                // required
+                "storage": {
+                    // required, only `cocaine_storage` supported now
+                    "type": "cocaine_storage",
+                    // required, storage name
+                    "name": "core",
+                    // optional, prefix all storage operations with this value
+                    "namespace": "authdb"
                 },
-                // prefix all storage operations with this value
-                "namespace": "authdb",
                 // allowed authentication methods
                 "authentication": [ "md5", "plain" ]
             }
         }
-
     },
 }
 ```
@@ -92,6 +94,12 @@ Removes user session. Returns array with _boolean_ `result` and _string_ `reason
 #### [result, ticket] authorize(string token, string perm)
 
 Authorizes allready authenticated user to specified permission `perm`. Returns array with _boolean_ `result` and _string_ `reason` for fails. `ticket` is not supported yet and empty string returned on success.
+
+### Changes
+
+`11.1.0`:
+
+* `namespace` option moved into storage section
 
 ### TODO:
 

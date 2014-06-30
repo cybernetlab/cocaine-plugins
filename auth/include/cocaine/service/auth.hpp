@@ -11,6 +11,7 @@
 #include <boost/mpl/list.hpp>
 
 #include "cocaine/service/auth/authentication.hpp"
+#include "cocaine/service/auth/authorization.hpp"
 #include "cocaine/service/auth/storage.hpp"
 
 namespace cocaine {
@@ -65,7 +66,7 @@ namespace auth {
 
 template<>
 struct protocol<auth_tag> {
-    typedef mpl::list<
+    typedef boost::mpl::list<
         auth::authenticate,
         auth::logout,
         auth::authorize
@@ -109,14 +110,11 @@ private:
     void
     save_sessions(Json::Value & user);
 
-    bool
-    inArray(Json::Value & arr, const std::string & value) const;
-
     context_t & m_context;
     std::shared_ptr<logging::log_t> m_log;
     std::shared_ptr<auth::storage_t> m_storage;
     auth::authentication::map_t m_authenticators;
-    const std::string m_namespace;
+    auth::authorization::permissions_t m_permissions;
 };
 
 } // namespace service
