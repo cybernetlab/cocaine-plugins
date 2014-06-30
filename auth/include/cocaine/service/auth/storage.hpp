@@ -30,8 +30,8 @@ class factory {
     // holds self reference for operator() as mpl::for_each copy (not move) instance of factory
     factory * m_factory;
     std::string m_name;
-    const Json::Value & m_args;
-    context_t & m_context;
+    const Json::Value * m_args;
+    context_t * m_context;
 
     // needed to wrap storage type to prevent their creation while lookup with for_each
     template <typename T> struct wrap {};
@@ -43,7 +43,7 @@ public:
         // avoid invalid usage and multiple storage creation
         if (m_factory == nullptr || m_factory->m_result != nullptr) return;
         if (m_name == T::type_name) {
-            m_factory->m_result = std::make_shared<T>(m_context, m_args);
+            m_factory->m_result = std::make_shared<T>(*m_context, *m_args);
         }
     };
 
@@ -51,8 +51,8 @@ public:
     create(context_t & context, const Json::Value & args) {
         m_factory = this;
         m_result = nullptr;
-        m_context = context;
-        m_args = args;
+        m_context = &context;
+        m_args = &args;
         m_name = args["type"].asString();
         mpl::for_each<list, wrap<mpl::placeholders::_1> >(*this);
         if (m_result == nullptr) throw cocaine::error_t("wrong storage type (%s)", m_name);
