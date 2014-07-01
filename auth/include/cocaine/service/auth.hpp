@@ -13,6 +13,7 @@
 #include "cocaine/service/auth/authentication.hpp"
 #include "cocaine/service/auth/authorization.hpp"
 #include "cocaine/service/auth/storage.hpp"
+#include "cocaine/service/auth/directory.hpp"
 
 namespace cocaine {
 
@@ -113,6 +114,7 @@ private:
     context_t & m_context;
     std::shared_ptr<logging::log_t> m_log;
     std::shared_ptr<auth::storage_t> m_storage;
+    auth::directory_t m_directory;
     auth::authentication::map_t m_authenticators;
     auth::authorization::permissions_t m_permissions;
 };

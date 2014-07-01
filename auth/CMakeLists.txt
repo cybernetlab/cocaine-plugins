@@ -7,15 +7,19 @@ IF(AUTH)
     LINK_DIRECTORIES()
 
     ADD_LIBRARY(auth MODULE
-        include/cocaine/service/auth.hpp
+        # include/cocaine/service/auth.hpp
         unique_id/unique_id
         md5/md5
         src/auth
         src/storage/base
         src/storage/cocaine_storage
-        src/authentication/plain.cpp
-        src/authentication/md5.cpp
-        src/authorization/permissions.cpp
+        src/directory/base
+        src/directory/permissions
+        src/directory/user
+        src/directory/directory
+        src/authentication/plain
+        src/authentication/md5
+        src/authorization/permissions
         src/module)
 
     TARGET_LINK_LIBRARIES(auth

@@ -15,6 +15,7 @@ auth_t::auth_t(cocaine::context_t & context,
     m_log(std::make_shared<logging::log_t>(context, name)),
     m_storage(auth::storage::factory().create(context, args["storage"])),
     m_authenticators(auth::authentication::factory(args["authentication"]).create()),
+    m_directory(m_log, m_storage, ""),
     m_permissions(m_log, m_storage)
 {
     COCAINE_LOG_DEBUG(m_log, "Auth started");
@@ -34,7 +35,12 @@ auth_t::authenticate(const std::string & type,
                      const std::string & data) {
     cocaine::deferred<response::authenticate> deferred;
     // load user
-    Json::Value user = m_storage->load("users", name);
+    std::shared_ptr<auth::directory::user_t> user_ptr = m_directory.get<auth::directory::user_t>("user", name);
+    std::cout << "USER: " << user_ptr->get("name", "test") << "\n";
+    auth::directory::user_t user = *(user_ptr.get());
+    // Json::Value user = user_.data();
+    std::cout << "received user " << user["name"] << "\n";
+    // Json::Value user = m_storage->load("users", name);
     if (user.isNull()) {
         deferred.write(std::make_tuple(false, "user not found"));
         return deferred;
