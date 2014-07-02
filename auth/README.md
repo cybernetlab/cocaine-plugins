@@ -40,15 +40,25 @@ With above config following file structure assumed:
 ```
 storage_root
   authdb
+    subdomain
+      users
+        other-user-1.json
+        other-user-2.json
+      config.json
+      permissions.json
     users
       user1.json
       user2.json
-    sessions.json
-    permissions.json
     config.json
+    permissions.json
+    sessions.json
 ```
 
-`config.json`:
+You can have nested authentication domains with separate configuration, permissions and users. Also you can control child domain permissions in parent `permission.json`.
+
+#### `config.json`:
+
+Now you can only select allowed authentication methods list.
 
 ```json
 {
@@ -57,7 +67,9 @@ storage_root
 }
 ```
 
-`user_name.json`:
+#### `user_name.json`:
+
+> **NOTE** role name should not contain `.` symbol
 
 ```json
 {
@@ -72,7 +84,9 @@ storage_root
 }
 ```
 
-`permissions.json`:
+#### `permissions.json`:
+
+> **NOTE** role name should not contain `.` symbol
 
 ```json
 // should be an array
@@ -87,6 +101,11 @@ storage_root
     {
         "deny": [ "guest" ],
         "to": [ "create_document" ]
+    },
+
+    {
+        "deny": [ "subdomain@guset" ]
+        "to": [ "view_document" ]
     }
 ]
 ```
@@ -98,6 +117,8 @@ storage_root
 #### [result, token] authenticate(string method, string name, string data)
 
 Authenticates user with `name` and authentication `data` (in many cases it is a password). Returns array with _boolean_ `result` and _string_ `token` (other name is `session`) that can be used later to authorize user. If `result` is `false`, second element contains `reason` of failed authentication.
+
+if `name` doesn't contain `@` char, it's assumed as user name in root realm. If `@` specified in the `name`, it separates user name (before `@`) and realm name (after `@`).
 
 #### [result, reason] logout(string token)
 
@@ -114,6 +135,8 @@ Authorizes allready authenticated user to specified permission `perm`. Returns a
 * `authentication` config option moved to local `config.json` files
 * `cache` main config option added
 * `memory` storage added for caching
+* nested realms
+* nested permissions
 
 `11.1.0`:
 
@@ -122,7 +145,7 @@ Authorizes allready authenticated user to specified permission `perm`. Returns a
 ### TODO:
 
 * More authentication methods
-* Rich permissions system
+* In progress: Rich permissions system
 * Authorization tickets
 * In progress: Cache auth system locally
 * Tokens and tickets TTL

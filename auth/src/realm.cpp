@@ -1,13 +1,14 @@
-#include "cocaine/service/auth/directory.hpp"
+#include "cocaine/service/auth/realm.hpp"
 
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
+#include <boost/range/adaptor/reversed.hpp>
 
 #include "unique_id.hpp"
 
 using namespace cocaine::service::auth;
 
-directory_t::directory_t(std::shared_ptr<logging::log_t> log,
+realm_t::realm_t(std::shared_ptr<logging::log_t> log,
                          storage_ptr storage,
                          storage_ptr cache,
                          const std::string & path):
@@ -23,40 +24,43 @@ directory_t::directory_t(std::shared_ptr<logging::log_t> log,
     if (m_authenticators.size() == 0) {
         COCAINE_LOG_WARNING(m_log, "Where are no authentication methods specified in config");
     }
+    m_parent = nullptr;
 }
 
-directory_t::directory_t(std::shared_ptr<logging::log_t> log,
+realm_t::realm_t(std::shared_ptr<logging::log_t> log,
                          storage_ptr storage,
                          storage_ptr cache):
-    directory_t(log, storage, cache, "")
+    realm_t(log, storage, cache, "")
 {
     m_sessions = std::make_shared<Json::Value>(get("sessions", "sessions"));
 }
 
-directory_t::directory_t(std::shared_ptr<logging::log_t> log,
+realm_t::realm_t(std::shared_ptr<logging::log_t> log,
                          storage_ptr storage,
                          storage_ptr cache,
                          const std::string & path,
-                         std::shared_ptr<Json::Value> sessions):
-    directory_t(log, storage, cache, path)
+                         realm_t * parent):
+    realm_t(log, storage, cache, path)
 {
-    m_sessions = sessions;
+    m_sessions = parent->m_sessions;
+    m_parent = parent;
 }
 
 Json::Value
-directory_t::get(const std::string & name)
+realm_t::get(const std::string & name)
 {
     return get(name, "");
 }
 
 Json::Value
-directory_t::get(const std::string & name, const char * type)
+realm_t::get(const std::string & name, const char * type)
 {
     return get(name, std::string(type));
 }
 
+// retrieve any object in this realm (directory)
 Json::Value
-directory_t::get(const std::string & name, const std::string & type)
+realm_t::get(const std::string & name, const std::string & type)
 {
     std::string path_str = path(type);
     if (!m_cache) return m_storage->load_safe(path_str, name);
@@ -72,31 +76,32 @@ directory_t::get(const std::string & name, const std::string & type)
 }
 
 void
-directory_t::save(const char * name, Json::Value & data)
+realm_t::save(const char * name, Json::Value & data)
 {
     save(std::string(name), data);
 }
 
 void
-directory_t::save(const std::string & name, const char * type, Json::Value & data)
+realm_t::save(const std::string & name, const char * type, Json::Value & data)
 {
     save(name, std::string(type), data);
 }
 
 void
-directory_t::save(const char * name, const char * type, Json::Value & data)
+realm_t::save(const char * name, const char * type, Json::Value & data)
 {
     save(std::string(name), std::string(type), data);
 }
 
 void
-directory_t::save(const std::string & name, Json::Value & data)
+realm_t::save(const std::string & name, Json::Value & data)
 {
     save(name, "", data);
 }
 
+// save object in realm
 void
-directory_t::save(const std::string & name, const std::string & type, Json::Value & data)
+realm_t::save(const std::string & name, const std::string & type, Json::Value & data)
 {
     std::string path_str = path(type);
     if (m_cache) m_cache->save(path_str, name, data);
@@ -108,76 +113,107 @@ directory_t::save(const std::string & name, const std::string & type, Json::Valu
     }
 }
 
-directory_t::resolve_token_result
-directory_t::resolve_token(const std::string & token)
+// find object and target realm by token
+realm_t::resolve_token_result
+realm_t::resolve_token(const std::string & token)
 {
+    // get session by token
     Json::Value session = m_sessions->get(token, Json::Value::null);
+    // raise error on invalid token
     if (session.isNull() || !session.isObject() ||
         !session["user_path"].isString() ||
         !session["user"].isString()) throw not_found_error();
+    // get user info from session
     std::string path_str = session["user_path"].asString();
-    std::vector<std::string> path;
-    boost::split(path, path_str, boost::is_any_of("./"), boost::token_compress_on);
-    string_iter begin = path.begin();
-    string_iter end = path.end();
-    auto r = resolve(begin, end, session["user"].asString(), false);
-    Json::Value user = r.second.get(r.first, "user");
+    Json::Value user;
+    realm_t * realm;
+    // find user and target realm
+    if (path_str == "") {
+        user = get(session["user"].asString(), "user");
+        realm = this;
+    } else {
+        std::vector<std::string> path;
+        boost::split(path, path_str, boost::is_any_of("./"), boost::token_compress_on);
+        string_iter begin = path.begin();
+        string_iter end = path.end();
+        // resolve user realm
+        auto r = resolve(begin, end, session["user"].asString(), false);
+        // retrieve user object
+        user = r.second.get(r.first, "user");
+        realm = &r.second;
+    }
+    // check sessions integrity
     if (user.isNull() || !inArray(user["sessions"], token)) {
         m_sessions->removeMember(token);
         try { save("sessions", "sessions", *m_sessions); } catch (storage::error) {}
         throw not_found_error();
     }
-    return resolve_token_result(user, r.second);
+    return resolve_token_result(user, *realm);
 }
 
-directory_t::resolve_result
-directory_t::resolve(const std::string & name)
+// find object name and target realm by fully-qualified name
+realm_t::resolve_result
+realm_t::resolve(const std::string & name)
 {
     size_t at_pos = name.find('@');
+    // if user name has no '@' symbol, assume it is in root namespace
     if (at_pos == std::string::npos) {
         return resolve_result(std::string(name), *this);
     }
+    // assume all after '@' is realm path
     std::string path_str = name.substr(at_pos + 1);
+    if (path_str == "") {
+        return resolve_result(std::string(name), *this);
+    }
     std::vector<std::string> path;
     boost::split(path, path_str, boost::is_any_of("./"), boost::token_compress_on);
     std::string name_ = name.substr(0, at_pos);
     string_iter begin = path.begin();
     string_iter end = path.end();
+    // resolve realm and user name
     return resolve(begin, end, name_, true);
 }
 
-directory_t::resolve_result
-directory_t::resolve(string_iter & begin,
+realm_t::resolve_result
+realm_t::resolve(string_iter & begin,
                      string_iter & end,
                      const std::string & name,
                      bool create_child)
 {
     if (m_children.find(*begin) == m_children.end()) {
-        // if (!create_child) throw not_found_error();
+        // create new realm if where are no one cached
         boost::filesystem::path path(m_path);
         path /= *begin;
         m_children.insert(children_map_t::value_type(
             *begin,
-            directory_t(m_log, m_storage, m_cache, path.string(), m_sessions)
+            realm_t(m_log, m_storage, m_cache, path.string(), this)
         ));
     }
-    directory_t & child = m_children.at(*begin);
+    realm_t & child = m_children.at(*begin);
+    // skip to next part of realm path
     begin++;
+    // return if end of realm path reached
     if (begin == end) return resolve_result(std::string(name), child);
+    // recursive search
     return child.resolve(begin, end, name, create_child);
 }
 
-directory_t::bool_result
-directory_t::authenticate(const std::string & type,
+// authenticate user
+realm_t::bool_result
+realm_t::authenticate(const std::string & type,
                           const std::string & name,
                           const std::string & data)
 {
     try {
+        // retrieve target realm and user name
         auto r = resolve(name);
+        // get user object
         Json::Value user = r.second.get(r.first, "user");
         if (user.isNull()) return std::make_tuple(false, "user not found");
+        // ensure required fields are right filled
         user["name"] = r.first;
         user["type"] = "user";
+        // ask target realm to authenticate user
         return r.second.authenticate(type, user, data);
     } catch (storage::error) {
         return std::make_tuple(false, "internal server error");
@@ -186,18 +222,22 @@ directory_t::authenticate(const std::string & type,
     }
 }
 
-directory_t::bool_result
-directory_t::logout(const std::string & token)
+// remove user session
+realm_t::bool_result
+realm_t::logout(const std::string & token)
 {
     try {
+        // retreive user and target realm by token
         auto r = resolve_token(token);
         if (r.first.isNull()) return std::make_tuple(false, "wrong token");
+        // remove session from user["sessions"] array
         Json::Value arr(Json::ValueType::arrayValue);
         for (auto item : r.first["sessions"]) {
             if (!item.isString() || item.asString() == token) continue;
             arr.append(item);
         }
         r.first["sessions"] = arr;
+        // clear session
         m_sessions->removeMember(token);
         // save all
         r.second.save(r.first["name"].asString(), "user", r.first);
@@ -210,13 +250,16 @@ directory_t::logout(const std::string & token)
     }
 }
 
-directory_t::bool_result
-directory_t::authorize(const std::string & token,
+// authorize user to specific permission
+realm_t::bool_result
+realm_t::authorize(const std::string & token,
                        const std::string & perm)
 {
     try {
+        // retrieve user and target realm by token
         auto r = resolve_token(token);
         if (r.first.isNull()) return std::make_tuple(false, "wrong token");
+        // ask target realm to authorize user
         return r.second.authorize(r.first, perm);
     } catch (storage::error) {
         return std::make_tuple(false, "internal server error");
@@ -225,33 +268,68 @@ directory_t::authorize(const std::string & token,
     }
 }
 
-
-directory_t::bool_result
-directory_t::authorize(Json::Value & user,
+realm_t::bool_result
+realm_t::authorize(Json::Value & user,
                        const std::string & perm)
 {
     if (user.isNull() || !user.isObject()) return std::make_tuple(false, "user not found");
-    // check for denied premissions
-    for (auto & role: user["roles"]) {
-        for (auto & permission: m_permissions) {
-            if (!inArray(permission["deny"], role.asString())) continue;
-            if (!inArray(permission["to"], perm)) continue;
+    // generate chain of realms up to root realm
+    std::list<realm_t *> realms;
+    for (realm_t * cur = this; cur != nullptr; cur = cur->m_parent) {
+        realms.push_back(cur);
+    }
+    // get fully-qualified roles names
+    Json::Value roles = user["roles"];
+    qualify_names(roles);
+    // check for denies from root to target realm
+    for (auto realm : boost::adaptors::reverse(realms)) {
+        if (realm->check_permission(roles, "deny", perm)) {
             return std::make_tuple(false, "");
         }
     }
-    // check for allowed premissions
-    for (auto & role: user["roles"]) {
-        for (auto & permission: m_permissions) {
-            if (!inArray(permission["allow"], role.asString())) continue;
-            if (!inArray(permission["to"], perm)) continue;
+    // check for allows from target realm to root
+    for (auto realm : realms) {
+        if (realm->check_permission(roles, "allow", perm)) {
             return std::make_tuple(true, "");
         }
     }
     return std::make_tuple(false, "");
 }
 
-directory_t::bool_result
-directory_t::authenticate(const std::string & type,
+void
+realm_t::qualify_names(Json::Value & names)
+{
+    if (!m_parent) return;
+    std::string realm_name = m_path;
+    std::replace(realm_name.begin(), realm_name.end(), '/', '.');
+    for (auto & name : names) {
+        if (!name.isString()) continue;
+        if (name.asString().find('@') != std::string::npos) continue;
+        name = name.asString() + "@" + realm_name;
+    }
+}
+
+bool
+realm_t::check_permission(const Json::Value & roles,
+                              const char * action,
+                              const std::string & perm)
+{
+    for (auto & role: roles) {
+        for (auto & permission: m_permissions) {
+            if (!permission.isMember(action)) continue;
+            Json::Value roles_to_check = permission[action];
+            if (!roles_to_check.isArray()) continue;
+            qualify_names(roles_to_check);
+            if (!inArray(roles_to_check, role.asString())) continue;
+            if (!inArray(permission["to"], perm)) continue;
+            return true;
+        }
+    }
+    return false;
+}
+
+realm_t::bool_result
+realm_t::authenticate(const std::string & type,
                           Json::Value & user,
                           const std::string & data)
 {
@@ -268,8 +346,10 @@ directory_t::authenticate(const std::string & type,
     // generate token
     unique_id_t uuid = unique_id_t();
     const std::string uuid_str(uuid.string());
+    // add session to user["sessions"] array
     if (user["sessions"].isNull()) user["sessions"] = Json::Value(Json::ValueType::arrayValue);
     user["sessions"][user["sessions"].size()] = uuid_str;
+    // fill session object
     (*m_sessions)[uuid_str] = Json::Value(Json::ValueType::objectValue);
     (*m_sessions)[uuid_str]["user"] = user["name"];
     (*m_sessions)[uuid_str]["user_path"] = m_path;
@@ -281,7 +361,7 @@ directory_t::authenticate(const std::string & type,
 }
 
 std::string
-directory_t::path(const std::string & type)
+realm_t::path(const std::string & type)
 {
     boost::filesystem::path p(m_path);
     if (type == "user") {
@@ -293,7 +373,7 @@ directory_t::path(const std::string & type)
 }
 
 bool
-directory_t::inArray(const Json::Value & arr, const std::string & value) const
+realm_t::inArray(const Json::Value & arr, const std::string & value) const
 {
     if (!arr.isArray() || arr.empty()) return false;
     for (auto & item: arr) {

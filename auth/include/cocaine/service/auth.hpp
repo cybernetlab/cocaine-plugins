@@ -11,7 +11,7 @@
 #include <boost/mpl/list.hpp>
 
 #include "cocaine/service/auth/storage.hpp"
-#include "cocaine/service/auth/directory.hpp"
+#include "cocaine/service/auth/realm.hpp"
 
 namespace cocaine {
 
@@ -107,7 +107,7 @@ private:
     std::shared_ptr<logging::log_t> m_log;
     auth::storage_ptr m_storage;
     auth::storage_ptr m_cache;
-    auth::directory_t m_directory;
+    auth::realm_t m_root;
 };
 
 } // namespace service

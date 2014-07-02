@@ -22,14 +22,14 @@ public:
     not_found_error(const char *msg): std::runtime_error(msg) {};
 };
 
-class directory_t {
+class realm_t {
 public:
-    typedef std::pair<std::string, directory_t &> resolve_result;
-    typedef std::pair<Json::Value, directory_t &> resolve_token_result;
+    typedef std::pair<std::string, realm_t &> resolve_result;
+    typedef std::pair<Json::Value, realm_t &> resolve_token_result;
     typedef std::tuple<bool, std::string> bool_result;
-    typedef std::map<std::string, directory_t> children_map_t;
+    typedef std::map<std::string, realm_t> children_map_t;
 
-    directory_t(std::shared_ptr<logging::log_t> log,
+    realm_t(std::shared_ptr<logging::log_t> log,
                 storage_ptr storage,
                 storage_ptr cache);
 
@@ -78,16 +78,16 @@ public:
 protected:
     typedef std::vector<std::string>::const_iterator string_iter;
 
-    directory_t(std::shared_ptr<logging::log_t> log,
+    realm_t(std::shared_ptr<logging::log_t> log,
                 storage_ptr storage,
                 storage_ptr cache,
                 const std::string & path);
 
-    directory_t(std::shared_ptr<logging::log_t> log,
+    realm_t(std::shared_ptr<logging::log_t> log,
                 storage_ptr storage,
                 storage_ptr cache,
                 const std::string & path,
-                std::shared_ptr<Json::Value> sessions);
+                realm_t * parent);
 
     resolve_result
     resolve(string_iter & begin, string_iter & end, const std::string & name, bool create_child);
@@ -103,7 +103,17 @@ protected:
 
     bool
     inArray(const Json::Value & arr, const std::string & value) const;
+
+    void
+    qualify_names(Json::Value & names);
+
+    bool
+    check_permission(const Json::Value & roles,
+                     const char * action,
+                     const std::string & perm);
+
 private:
+    realm_t * m_parent;
     storage_ptr m_storage;
     storage_ptr m_cache;
     std::shared_ptr<logging::log_t> m_log;
