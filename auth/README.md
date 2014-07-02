@@ -25,8 +25,9 @@ Sample cocaine config part regarding auth (remove comments when copy-paste):
                     // optional, prefix all storage operations with this value
                     "namespace": "authdb"
                 },
+                // optional
                 "cache": {
-                    "type": "memory" // or can be "cocaine_storage"
+                    "type": "memory" // or can be `cocaine_storage`
                 }
             }
         }

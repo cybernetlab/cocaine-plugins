@@ -57,7 +57,6 @@ public:
         m_args = &args;
         m_name = args["type"].asString();
         mpl::for_each<list, wrap<mpl::placeholders::_1> >(*this);
-        if (m_result == nullptr) throw cocaine::error_t("wrong storage type (%s)", m_name);
         return m_result;
     };
 };

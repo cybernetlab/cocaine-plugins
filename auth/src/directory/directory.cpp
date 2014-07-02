@@ -14,7 +14,7 @@ directory_t::directory_t(std::shared_ptr<logging::log_t> log,
     m_log(log),
     m_storage(storage),
     m_cache(cache),
-    m_path(""),
+    m_path(path),
     m_config(get("config")),
     m_permissions(get("permissions")),
     m_index(get("index"))
@@ -174,7 +174,7 @@ directory_t::authenticate(const std::string & type,
 {
     try {
         auto r = resolve(name);
-        Json::Value user = get(r.first, "user");
+        Json::Value user = r.second.get(r.first, "user");
         if (user.isNull()) return std::make_tuple(false, "user not found");
         user["name"] = r.first;
         user["type"] = "user";

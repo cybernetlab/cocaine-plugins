@@ -16,6 +16,8 @@ auth_t::auth_t(cocaine::context_t & context,
     m_cache(auth::storage::factory().create(context, args["cache"])),
     m_directory(m_log, m_storage, m_cache)
 {
+    if (!m_storage) throw cocaine::error_t("wrong storage config");
+
     COCAINE_LOG_DEBUG(m_log, "Auth service started");
 
     on<io::auth::authenticate>("authenticate", std::bind(&auth_t::authenticate, this, _1, _2, _3));
