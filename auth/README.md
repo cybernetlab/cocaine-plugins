@@ -25,8 +25,9 @@ Sample cocaine config part regarding auth (remove comments when copy-paste):
                     // optional, prefix all storage operations with this value
                     "namespace": "authdb"
                 },
-                // allowed authentication methods
-                "authentication": [ "md5", "plain" ]
+                "cache": {
+                    "type": "memory" // or can be "cocaine_storage"
+                }
             }
         }
     },
@@ -43,6 +44,16 @@ storage_root
       user2.json
     sessions.json
     permissions.json
+    config.json
+```
+
+`config.json`:
+
+```json
+{
+    // allowed authentication methods
+    "authentication": [ "md5", "plain" ]
+}
 ```
 
 `user_name.json`:
@@ -51,8 +62,8 @@ storage_root
 {
     // required. should be same as file name (without .json)
     "name" : "user_name",
-    // required. should be exactly `users`
-    "type" : "users",
+    // required. should be exactly `user`
+    "type" : "user",
     // passwords are stored in md5-encoded form
     "password" : "0945fc9611f55fd0e183fb8b044f1afe",
     // should be an array
@@ -97,6 +108,12 @@ Authorizes allready authenticated user to specified permission `perm`. Returns a
 
 ### Changes
 
+`11.1.1`:
+
+* `authentication` config option moved to local `config.json` files
+* `cache` main config option added
+* `memory` storage added for caching
+
 `11.1.0`:
 
 * `namespace` option moved into storage section
@@ -106,5 +123,5 @@ Authorizes allready authenticated user to specified permission `perm`. Returns a
 * More authentication methods
 * Rich permissions system
 * Authorization tickets
-* Cache auth system locally
+* In progress: Cache auth system locally
 * Tokens and tickets TTL
