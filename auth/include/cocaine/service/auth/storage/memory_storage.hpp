@@ -1,5 +1,7 @@
 #pragma once
 
+#include <map>
+
 #include <cocaine/context.hpp>
 #include <cocaine/api/storage.hpp>
 
@@ -7,12 +9,12 @@
 
 namespace cocaine { namespace service { namespace auth { namespace storage {
 
-class cocaine_storage_t : public storage_t {
+class memory_storage_t : public storage_t {
 public:
     static const char *type_name;
 
-    cocaine_storage_t(context_t & context,
-                      const Json::Value & args);
+    memory_storage_t(context_t & context,
+                     const Json::Value & args);
 
     virtual
     Json::Value
@@ -31,7 +33,9 @@ public:
            const std::string & name);
 
 private:
-    std::string m_storage_name;
+    typedef std::map<std::string, Json::Value> data_map_t;
+
+    data_map_t m_data;
 };
 
 } } } }

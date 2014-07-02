@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cocaine/service/auth/storage/cocaine_storage.hpp"
+#include "cocaine/service/auth/storage/memory_storage.hpp"
 
 #include <memory>
 #include <boost/mpl/list.hpp>
@@ -17,7 +18,8 @@ namespace cocaine { namespace service { namespace auth { namespace storage {
 
 // list of available storage types
 typedef mpl::list<
-    cocaine_storage
+    cocaine_storage_t,
+    memory_storage_t
 > list;
 
 /**

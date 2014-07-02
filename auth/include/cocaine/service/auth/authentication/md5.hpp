@@ -1,6 +1,6 @@
 #pragma once
 
-#include "cocaine/service/auth/authentication/base.hpp"
+#include "cocaine/service/auth/authentication/authenticator.hpp"
 
 namespace cocaine { namespace service { namespace auth { namespace authentication {
 

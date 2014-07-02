@@ -3,6 +3,7 @@ import time
 import hashlib
 
 user = 'testuser'
+subuser = 'user@realm'
 password = 'nopass'
 perm1 = 'view_document'
 perm2 = 'create_document'
@@ -17,6 +18,11 @@ print('Test authenication')
 print('  md5 result:', auth.authenticate('md5', user, password_md5).get())
 print('  plain result:', auth.authenticate('plain', user, password).get())
 print('')
+
+#print('Test realm\'ed authenication')
+#print('  md5 result:', auth.authenticate('md5', subuser, password_md5).get())
+#print('  plain result:', auth.authenticate('plain', subuser, password).get())
+#print('')
 
 result = auth.authenticate('plain', user, password).get()
 if (result[0] == True):

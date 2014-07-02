@@ -32,16 +32,12 @@ typedef std::map<std::string, std::shared_ptr<authenticator_t> > map_t;
  */
 class factory {
     // holds result authentication methods map
-    map_t m_result;
+    map_t * m_map;
     // holds self reference for operator() as mpl::for_each copy (not move) instance of factory
     factory * m_factory;
-    const Json::Value & m_args;
+    Json::Value m_args;
 
 public:
-    factory(const Json::Value & args) :
-        m_args(args)
-    {};
-
     // needed to wrap authentication methods to prevent their creation while lookup with for_each
     template <typename T> struct wrap {};
 
@@ -97,14 +93,15 @@ public:
             throw cocaine::error_t("wrong authentication methods type");
         }
 
-        m_factory->m_result[T::type_name] = std::make_shared<T>(params);
+        (*m_factory->m_map)[T::type_name] = std::make_shared<T>(params);
     };
 
-    map_t
-    create() {
+    void
+    fill(map_t & map, const Json::Value & args) {
         m_factory = this;
+        m_args = args;
+        m_map = &map;
         mpl::for_each<list, wrap<mpl::placeholders::_1> >(*this);
-        return m_result;
     };
 };
 
