@@ -121,7 +121,7 @@ directory_t::resolve_token(const std::string & token)
     string_iter begin = path.begin();
     string_iter end = path.end();
     auto r = resolve(begin, end, session["user"].asString(), false);
-    Json::Value user = get(r.first, "user");
+    Json::Value user = r.second.get(r.first, "user");
     if (user.isNull() || !inArray(user["sessions"], token)) {
         m_sessions->removeMember(token);
         try { save("sessions", "sessions", *m_sessions); } catch (storage::error) {}
