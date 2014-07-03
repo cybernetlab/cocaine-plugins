@@ -1,5 +1,6 @@
 #include "cocaine/service/auth/realm.hpp"
 
+#include <boost/regex.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/range/adaptor/reversed.hpp>
@@ -9,9 +10,9 @@
 using namespace cocaine::service::auth;
 
 realm_t::realm_t(std::shared_ptr<logging::log_t> log,
-                         storage_ptr storage,
-                         storage_ptr cache,
-                         const std::string & path):
+                 storage_ptr storage,
+                 storage_ptr cache,
+                 const std::string & path):
     m_log(log),
     m_storage(storage),
     m_cache(cache),
@@ -28,18 +29,18 @@ realm_t::realm_t(std::shared_ptr<logging::log_t> log,
 }
 
 realm_t::realm_t(std::shared_ptr<logging::log_t> log,
-                         storage_ptr storage,
-                         storage_ptr cache):
+                 storage_ptr storage,
+                 storage_ptr cache):
     realm_t(log, storage, cache, "")
 {
     m_sessions = std::make_shared<Json::Value>(get("sessions", "sessions"));
 }
 
 realm_t::realm_t(std::shared_ptr<logging::log_t> log,
-                         storage_ptr storage,
-                         storage_ptr cache,
-                         const std::string & path,
-                         realm_t * parent):
+                 storage_ptr storage,
+                 storage_ptr cache,
+                 const std::string & path,
+                 realm_t * parent):
     realm_t(log, storage, cache, path)
 {
     m_sessions = parent->m_sessions;
@@ -176,9 +177,9 @@ realm_t::resolve(const std::string & name)
 
 realm_t::resolve_result
 realm_t::resolve(string_iter & begin,
-                     string_iter & end,
-                     const std::string & name,
-                     bool create_child)
+                 string_iter & end,
+                 const std::string & name,
+                 bool create_child)
 {
     if (m_children.find(*begin) == m_children.end()) {
         // create new realm if where are no one cached
@@ -201,8 +202,8 @@ realm_t::resolve(string_iter & begin,
 // authenticate user
 realm_t::bool_result
 realm_t::authenticate(const std::string & type,
-                          const std::string & name,
-                          const std::string & data)
+                      const std::string & name,
+                      const std::string & data)
 {
     try {
         // retrieve target realm and user name
@@ -242,6 +243,9 @@ realm_t::logout(const std::string & token)
         // save all
         r.second.save(r.first["name"].asString(), "user", r.first);
         save("sessions", "sessions", *m_sessions);
+
+        COCAINE_LOG_DEBUG(m_log, "User %s successfully logged out. Session ID: %s", r.first["name"].asString(), token);
+
         return std::make_tuple(true, "");
     } catch (storage::error) {
         return std::make_tuple(false, "internal server error");
@@ -253,7 +257,7 @@ realm_t::logout(const std::string & token)
 // authorize user to specific permission
 realm_t::bool_result
 realm_t::authorize(const std::string & token,
-                       const std::string & perm)
+                   const std::string & perm)
 {
     try {
         // retrieve user and target realm by token
@@ -270,7 +274,7 @@ realm_t::authorize(const std::string & token,
 
 realm_t::bool_result
 realm_t::authorize(Json::Value & user,
-                       const std::string & perm)
+                   const std::string & perm)
 {
     if (user.isNull() || !user.isObject()) return std::make_tuple(false, "user not found");
     // generate chain of realms up to root realm
@@ -283,13 +287,14 @@ realm_t::authorize(Json::Value & user,
     qualify_names(roles);
     // check for denies from root to target realm
     for (auto realm : boost::adaptors::reverse(realms)) {
-        if (realm->check_permission(roles, "deny", perm)) {
+        if (realm->check_rights(roles, "deny", perm)) {
             return std::make_tuple(false, "");
         }
     }
     // check for allows from target realm to root
     for (auto realm : realms) {
-        if (realm->check_permission(roles, "allow", perm)) {
+        if (realm->check_rights(roles, "allow", perm)) {
+            COCAINE_LOG_DEBUG(m_log, "User %s successfully authorized to %s", user["name"].asString(), perm);
             return std::make_tuple(true, "");
         }
     }
@@ -310,9 +315,9 @@ realm_t::qualify_names(Json::Value & names)
 }
 
 bool
-realm_t::check_permission(const Json::Value & roles,
-                              const char * action,
-                              const std::string & perm)
+realm_t::check_rights(const Json::Value & roles,
+                      const char * action,
+                      const std::string & perm)
 {
     for (auto & role: roles) {
         for (auto & permission: m_permissions) {
@@ -320,8 +325,8 @@ realm_t::check_permission(const Json::Value & roles,
             Json::Value roles_to_check = permission[action];
             if (!roles_to_check.isArray()) continue;
             qualify_names(roles_to_check);
-            if (!inArray(roles_to_check, role.asString())) continue;
-            if (!inArray(permission["to"], perm)) continue;
+            if (!inArray(roles_to_check, role.asString(), '@')) continue;
+            if (!inArray(permission["to"], perm, ':')) continue;
             return true;
         }
     }
@@ -330,8 +335,8 @@ realm_t::check_permission(const Json::Value & roles,
 
 realm_t::bool_result
 realm_t::authenticate(const std::string & type,
-                          Json::Value & user,
-                          const std::string & data)
+                      Json::Value & user,
+                      const std::string & data)
 {
     if (user.isNull() || !user.isObject()) return std::make_tuple(false, "user not found");
     // find authentication method
@@ -356,6 +361,9 @@ realm_t::authenticate(const std::string & type,
     // save all
     save(user["name"].asString(), "user", user);
     save("sessions", "sessions", *m_sessions);
+
+    COCAINE_LOG_DEBUG(m_log, "User %s successfully authenticated. Session ID: %s", user["name"].asString(), uuid_str);
+
     // return token
     return std::make_tuple(true, uuid_str);
 }
@@ -373,12 +381,67 @@ realm_t::path(const std::string & type)
 }
 
 bool
-realm_t::inArray(const Json::Value & arr, const std::string & value) const
+realm_t::inArray(const Json::Value & arr,
+                 const std::string & value) const
 {
     if (!arr.isArray() || arr.empty()) return false;
     for (auto & item: arr) {
         if (!item.isString()) continue;
         if (item.asString() == value) return true;
+    }
+    return false;
+}
+
+bool
+realm_t::inArray(const Json::Value & arr,
+                 const std::string & value,
+                 const char delimiter) const
+{
+    if (!arr.isArray() || arr.empty()) return false;
+
+    std::string sanitize_str("[^a-zA-Z0-9_.*");
+    sanitize_str += delimiter;
+    sanitize_str += "-]";
+
+    std::string star_repl("[^.");
+    star_repl += delimiter;
+    star_repl += "]+";
+
+    std::string stars_repl("[^");
+    stars_repl += delimiter;
+    stars_repl += "]+";
+
+    boost::regex sanitize(sanitize_str, boost::regex::extended);
+    boost::regex dots("\\.", boost::regex::extended);
+    boost::regex stars("\\*\\*", boost::regex::extended);
+    boost::regex star("\\*", boost::regex::extended);
+
+    for (auto & item: arr) {
+        if (!item.isString()) continue;
+        std::string check(item.asString());
+        if (check == "*") return true;
+        if (check.find('*') == std::string::npos) {
+            if (check == value) {
+                return true;
+            } else {
+                continue;
+            }
+        }
+
+        std::string re_str(
+            "^" +
+            boost::regex_replace(
+                boost::regex_replace(
+                    boost::regex_replace(
+                        boost::regex_replace(check, sanitize, ""),
+                    dots, "\\."),
+                stars, stars_repl),
+            star, star_repl)
+            + "$"
+        );
+
+        boost::regex re(re_str, boost::regex::extended);
+        if (boost::regex_match(value, re)) return true;
     }
     return false;
 }

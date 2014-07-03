@@ -7,7 +7,6 @@ IF(AUTH)
     LINK_DIRECTORIES()
 
     ADD_LIBRARY(auth MODULE
-        # include/cocaine/service/auth.hpp
         unique_id/unique_id
         md5/md5
         src/auth
@@ -20,7 +19,8 @@ IF(AUTH)
         src/module)
 
     TARGET_LINK_LIBRARIES(auth
-        cocaine-core)
+        cocaine-core
+        boost_regex)
 
     SET_TARGET_PROPERTIES(auth PROPERTIES
         PREFIX ""

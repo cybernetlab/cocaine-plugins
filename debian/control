@@ -101,6 +101,7 @@ Description: Cocaine - URLFetch Service Development Headers
 
 Package: libcocaine-plugin-auth2
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.6)
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.6),
+ libboost-regex-dev
 Description: Cocaine - Auth Service
  Auth Service for Cocaine.

@@ -104,13 +104,16 @@ protected:
     bool
     inArray(const Json::Value & arr, const std::string & value) const;
 
+    bool
+    inArray(const Json::Value & arr, const std::string & value, const char delimiter) const;
+
     void
     qualify_names(Json::Value & names);
 
     bool
-    check_permission(const Json::Value & roles,
-                     const char * action,
-                     const std::string & perm);
+    check_rights(const Json::Value & roles,
+                 const char * action,
+                 const std::string & perm);
 
 private:
     realm_t * m_parent;
