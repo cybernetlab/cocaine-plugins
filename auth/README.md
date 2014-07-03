@@ -78,7 +78,7 @@ storage_root
 
 You can use `tools/setup.py` utility to make initial layout of auth database (make sure to install [cocaine python framework](https://github.com/cocaine/cocaine-framework-python) before use this utility).
 
-You can have nested authentication domains with separate configuration, permissions and users. Also you can control child domain permissions in parent `permission.json`.
+You can have nested authentication domains with separate configuration, permissions and users. Also you can control child domain permissions in parent `permissions.json`.
 
 #### `config.json`:
 
@@ -122,6 +122,8 @@ Single `*` without any other characters matches any role or permission.
 `*` as placeholder in roles and permissions names matches any character except `.` and `:` for permissions or `@` for roles. For example, `*:create` will match `document:create` but will not match `pdf.document:create`. Same for roles: `guest@*` will match `guest@subdomain` but will not match `guest` and `guest@more.levels.domain`.
 
 `**` matches any character except `:` for permission or `@` for roles. For example, `**:create` will match `document:create` and `pdf.document:create`. For roles: `guest@**` will match `guest` user in any subdomain.
+
+Permission are checked firstly for `deny` permissions from target domain up to root. If matches occurs, user is rejected to take this permission. If no matches then permission checks for `allow` chain in reverse order: from root domain to target. User will be granted for permission if and only if where are match in allow chain. All unmatched permissions are denied.
 
 ```json
 // should be an array
