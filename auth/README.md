@@ -123,7 +123,7 @@ Single `*` without any other characters matches any role or permission.
 
 `**` matches any character except `:` for permission or `@` for roles. For example, `**:create` will match `document:create` and `pdf.document:create`. For roles: `guest@**` will match `guest` user in any subdomain.
 
-Permission are checked firstly for `deny` permissions from target domain up to root. If matches occurs, user is rejected to take this permission. If no matches then permission checks for `allow` chain in reverse order: from root domain to target. User will be granted for permission if and only if where are match in allow chain. All unmatched permissions are denied.
+Permission are checked firstly for `deny` permissions from target domain up to root. If matches occurs, authorization is rejected. If no matches then permission checked for `allow` chain in reverse order: from root domain to target. User will be granted for permission if and only if where are match in allow chain. All unmatched permissions are denied.
 
 ```json
 // should be an array
