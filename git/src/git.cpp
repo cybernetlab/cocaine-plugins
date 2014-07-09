@@ -5,6 +5,7 @@
 
 using namespace std::placeholders;
 using namespace cocaine::service;
+using namespace cocaine::service::git;
 
 git_t::git_t(cocaine::context_t & context,
              cocaine::io::reactor_t & reactor,
@@ -16,7 +17,7 @@ git_t::git_t(cocaine::context_t & context,
 {
     COCAINE_LOG_DEBUG(m_log, "Git service started");
 
-    on<io::auth::create>("create", std::bind(&git_t::create, this, _1));
+    on<io::git::create>("create", std::bind(&git_t::create, this, _1));
 }
 
 cocaine::deferred<response::create>

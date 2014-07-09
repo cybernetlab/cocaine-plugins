@@ -12,8 +12,8 @@ IF(GIT)
         # unique_id/unique_id
         # md5/md5
         src/git
-        src/git/cocaine_odb_backend
-        src/git/repository
+        src/cocaine_odb_backend
+        src/repository
         # src/storage/cocaine_storage
         # src/storage/memory_storage
         # src/authentication/plain
