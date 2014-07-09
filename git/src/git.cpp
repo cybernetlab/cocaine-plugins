@@ -1,4 +1,5 @@
 #include <cocaine/logging.hpp>
+#include <git2/threads.h>
 
 #include "cocaine/service/git.hpp"
 #include "cocaine/service/git/repository.hpp"
@@ -15,9 +16,14 @@ git_t::git_t(cocaine::context_t & context,
     m_context(context),
     m_log(std::make_shared<logging::log_t>(context, name))
 {
-    COCAINE_LOG_DEBUG(m_log, "Git service started");
-
+    git_threads_init();
     on<io::git::create>("create", std::bind(&git_t::create, this, _1));
+    COCAINE_LOG_DEBUG(m_log, "Git service started");
+}
+
+git_t::~git_t()
+{
+    git_threads_shutdown();
 }
 
 cocaine::deferred<response::create>
@@ -26,7 +32,8 @@ git_t::create(const std::string & path) {
     try {
         repository_t repo(m_context, path);
         deferred.write(std::make_tuple<bool>(true));
-    } catch (std::runtime_error) {
+    } catch (const error_t & e) {
+        COCAINE_LOG_INFO(m_log, "Error while processing create request. %s", e.what());
         deferred.write(std::make_tuple<bool>(false));
     }
     return deferred;

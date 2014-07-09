@@ -19,6 +19,7 @@ public:
           io::reactor_t & reactor,
           const std::string & name,
           const Json::Value & args);
+    ~git_t();
 
 private:
     cocaine::deferred<response::create>

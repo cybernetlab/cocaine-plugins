@@ -115,16 +115,13 @@ int cocaine_odb_backend__exists(git_odb_backend *_backend,
     return 0;
 }
 
-int cocaine_odb_backend__write(git_oid *id,
-                               git_odb_backend *_backend,
+int cocaine_odb_backend__write(git_odb_backend *_backend,
+                               const git_oid *id,
                                const void *data,
                                size_t len,
                                git_otype type)
 {
     assert(id && _backend && data);
-
-    int error = GIT_ERROR;
-    if ((error = git_odb_hash(id, data, len, type)) < 0) return error;
 
     cocaine_odb_backend * backend = (cocaine_odb_backend *) _backend;
     std::ostringstream stream;
@@ -183,6 +180,7 @@ int git_odb_backend_cocaine(git_odb_backend **backend_out,
     backend->parent.write = &cocaine_odb_backend__write;
     backend->parent.exists = &cocaine_odb_backend__exists;
     backend->parent.free = &cocaine_odb_backend__free;
+    backend->parent.version = GIT_ODB_BACKEND_VERSION;
 
     *backend_out = (git_odb_backend *) backend;
     return GIT_OK;
