@@ -4,6 +4,7 @@ PROJECT(COCAINE-PLUGINS)
 
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
+OPTION(GIT "Git repository access plugin" OFF)
 OPTION(BLASTBEAT "Build Blastbeat Driver plugin" OFF)
 OPTION(CACHE "Build LRU Cache plugin" ON)
 OPTION(DOCKER "Build Docker Isolation plugin" ON)
@@ -51,6 +52,7 @@ LINK_DIRECTORIES(
     ${LIBZMQ_LIBRARY_DIRS})
 
 SET(PLUGINS
+        git
         blastbeat
         cache
         docker
