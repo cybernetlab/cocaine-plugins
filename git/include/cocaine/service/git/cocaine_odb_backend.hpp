@@ -8,8 +8,10 @@
 
 namespace cocaine { namespace service { namespace git {
 
+typedef std::shared_ptr<api::storage_t> storage_ptr;
+
 int git_odb_backend_cocaine(git_odb_backend **backend_out,
-                            std::shared_ptr<api::storage_t> & storage,
+                            storage_ptr & storage,
                             const std::string & path);
 
 } } }

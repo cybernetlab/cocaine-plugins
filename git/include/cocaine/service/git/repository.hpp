@@ -28,7 +28,8 @@ public:
 private:
     context_t & m_context;
 
-    git_repository    * m_repository;
+    git_repository                  * m_repository;
+    std::shared_ptr<api::storage_t> m_storage;
 //    odb_ptr           m_odb;
 //    odb_backend_ptr   m_odb_backend;
 //    refdb_ptr         m_refdb;
