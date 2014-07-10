@@ -15,8 +15,8 @@ repository_t::repository_t(context_t & context,
     m_repository(nullptr),
     m_storage(api::storage(context, std::string("core")))
 {
-    git_odb             * p_odb;
-    git_odb_backend     * p_odb_backend;
+    git_odb*            p_odb = nullptr;
+    git_odb_backend*    p_odb_backend = nullptr;
 //    git_refdb           * p_refdb;
 //    git_refdb_backend   * p_refdb_backend;
 

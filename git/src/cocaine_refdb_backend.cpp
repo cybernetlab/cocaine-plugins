@@ -2,6 +2,8 @@
 #include <json/value.h>
 #include <cocaine/api/storage.hpp>
 
+#include <git2/refs.h>
+
 #include "cocaine/service/git/cocaine_refdb_backend.hpp"
 
 using namespace cocaine;
@@ -10,6 +12,8 @@ using namespace cocaine::service::git;
 namespace cocaine { namespace service { namespace git {
 
 #define COCAINE_GIT_REF_TAG "ref"
+#define COCAINE_GIT_REFSYM_TAG "ref-symbolic"
+#define COCAINE_GIT_REFOID_TAG "ref-oid"
 
 typedef struct {
     git_refdb_backend   parent;
@@ -42,9 +46,28 @@ int cocaine_refdb_backend__exists(int *exists,
 * implementation must provide this function.
 */
 int cocaine_refdb_backend__lookup(git_reference **out,
-                                  git_refdb_backend *backend,
+                                  git_refdb_backend *_backend,
                                   const char *ref_name)
-{}
+{
+    assert(_backend);
+
+    if (out) *out = nullptr;
+    cocaine_refdb_backend * backend = (cocaine_refdb_backend *) _backend;
+    query.push_back(std::string(COCAINE_GIT_REF_TAG));
+    query.push_back(std::string(COCAINE_GIT_REFSYM_TAG));
+    query.push_back(std::string(ref_name));
+    std::vector<std::string> result = backend->db->find(*backend->path, query);
+    if (result.size() > 0) {
+        if (out) {
+            std::string target = backend->db->read(*backend->path, result[0]);
+            *out = git_reference__alloc_symbolic(ref_name)
+        }
+    } else {
+        query[1] = std::string(COCAINE_GIT_REFOID_TAG);
+        result = backend->db->find(*backend->path, query);
+    }
+    return 0;
+}
 
 /**
 * Allocate an iterator object for the backend.
