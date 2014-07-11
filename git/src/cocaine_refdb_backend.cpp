@@ -3,6 +3,7 @@
 #include <cocaine/api/storage.hpp>
 
 #include <git2/refs.h>
+#include <git2/errors.h>
 
 #include "cocaine/service/git/cocaine_refdb_backend.hpp"
 
@@ -59,14 +60,42 @@ int cocaine_refdb_backend__lookup(git_reference **out,
     std::vector<std::string> result = backend->db->find(*backend->path, query);
     if (result.size() > 0) {
         if (out) {
-            std::string target = backend->db->read(*backend->path, result[0]);
-            *out = git_reference__alloc_symbolic(ref_name)
+            std::string target;
+            try {
+                target = backend->db->read(*backend->path, result[0]);
+            } catch (storage_error_t) {
+                giterr_set(GITERR_OS, "IO error while reading %s/%s",
+                           backend->path.c_str(), ref_name);
+                return GIT_ERROR;
+            }
+            *out = git_reference__alloc_symbolic(ref_name, target.c_str());
         }
     } else {
         query[1] = std::string(COCAINE_GIT_REFOID_TAG);
         result = backend->db->find(*backend->path, query);
+        if (result.size() > 0) {
+            if (out) {
+                std::string str;
+                git_oid oid;
+                try {
+                    str = backend->db->read(*backend->path, result[0]);
+                } catch (storage_error_t) {
+                    giterr_set(GITERR_OS, "IO error while reading %s/%s",
+                               backend->path.c_str(), ref_name);
+                    return GIT_ERROR;
+                }
+                if (str.size() < GIT_OID_HEXSZ || git_oid_fromstr(&oid, str.c_str()) < 0) {
+                    giterr_set(GITERR_REFERENCE, "Corrupted reference file %s/%s",
+                               backend->path.c_str(), ref_name);
+                    return GIT_ERROR;
+                }
+                *out = git_reference__alloc(ref_name, &oid, nullptr);
+            }
+        } else {
+            return GIT_ENOTFOUND;
+        }
     }
-    return 0;
+    return GIT_OK;
 }
 
 /**
