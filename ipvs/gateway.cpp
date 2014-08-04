@@ -74,13 +74,12 @@ ipvs_t::ipvs_t(context_t& context, const std::string& name, const dynamic_t& arg
 
     COCAINE_LOG_INFO(m_log, "using IPVS version %d", ::ipvs_version());
 
-    uint16_t min, max;
-
-    try {
-        std::tie(min, max) = args.as_object()["port-range"].to<std::tuple<uint16_t, uint16_t>>();
-    } catch(...) {
+    if(args["port-range"].empty()) {
         throw cocaine::error_t("no port ranges have been specified");
     }
+
+    uint16_t min = args["port-range"][0].asUInt(),
+             max = args["port-range"][1].asUInt();
 
     COCAINE_LOG_INFO(m_log, "%u gateway ports available, %u through %u", max - min, min, max);
 
@@ -239,6 +238,11 @@ ipvs_t::add_service(const std::string& name, const service_info_t& info) {
         std::memset(&service, 0, sizeof(service));
 
         copy_address(service.addr, *endpoint);
+
+        // Chinese people do that in ipvsadm probably for a reason.
+        if(endpoint->protocol().family() == PF_INET6) {
+            service.netmask = 128;
+        }
 
         service.af         = endpoint->protocol().family();
         service.port       = htons(endpoint->port());
